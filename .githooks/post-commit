@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Purpose: tag commits automatically when the committed pyproject.toml project
+# version changes.
+
+set -euo pipefail
+
+read_project_version() {
+    # Read pyproject.toml from stdin and print the [project].version value.
+    python3 -c '
+import sys
+
+in_project = False
+for raw_line in sys.stdin:
+    line = raw_line.strip()
+    if line.startswith("[") and line.endswith("]"):
+        in_project = line == "[project]"
+        continue
+    if in_project and line.startswith("version"):
+        parts = line.split("=", 1)
+        if len(parts) == 2:
+            value = parts[1].strip()
+            if len(value) >= 2 and value[0] in (chr(34), chr(39)) and value[-1] == value[0]:
+                print(value[1:-1])
+                raise SystemExit(0)
+            if len(value) >= 3 and value[0] in (chr(34), chr(39)) and "#" in value:
+                value = value.split("#", 1)[0].strip()
+            if len(value) >= 2 and value[0] in (chr(34), chr(39)) and value[-1] == value[0]:
+                print(value[1:-1])
+                raise SystemExit(0)
+            raise SystemExit(0)
+raise SystemExit(1)
+'
+}
+
+if ! git cat-file -e HEAD:pyproject.toml 2>/dev/null; then
+    exit 0
+fi
+
+previous_commit=""
+if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+    previous_commit="HEAD^"
+fi
+
+if [[ -n "${previous_commit}" ]]; then
+    if git diff --quiet "${previous_commit}" HEAD -- pyproject.toml; then
+        exit 0
+    fi
+
+    previous_version="$(
+        git show "${previous_commit}:pyproject.toml" 2>/dev/null | read_project_version || true
+    )"
+else
+    previous_version=""
+fi
+
+current_version="$(git show HEAD:pyproject.toml | read_project_version)"
+
+if [[ -z "${current_version}" || "${current_version}" == "${previous_version}" ]]; then
+    exit 0
+fi
+
+tag_name="v${current_version}"
+if ! git check-ref-format --allow-onelevel "${tag_name}" >/dev/null 2>&1; then
+    echo "post-commit: skip invalid tag name ${tag_name}" >&2
+    exit 0
+fi
+
+if git rev-parse --verify --quiet "refs/tags/${tag_name}" >/dev/null; then
+    existing_target="$(git rev-list -n 1 "${tag_name}")"
+    head_target="$(git rev-parse HEAD)"
+    if [[ "${existing_target}" == "${head_target}" ]]; then
+        echo "post-commit: tag ${tag_name} already exists on HEAD"
+    else
+        echo "post-commit: tag ${tag_name} already exists on another commit" >&2
+    fi
+    exit 0
+fi
+
+git tag "${tag_name}" HEAD
+echo "post-commit: created tag ${tag_name}"

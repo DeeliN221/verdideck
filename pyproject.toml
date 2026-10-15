@@ -1,0 +1,84 @@
+[project]
+name = "verdideck"
+version = "1.0.4"
+description = "Keyboard-driven TUI frontend for AiiDA verdi CLI"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  "aiida-core>=1.6.9,<3.0",
+  "setuptools>=65,<81",
+  "textual>=0.50.0,<1.0",
+  "pyperclip>=1.8.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/DeeliN221/verdideck"
+Repository = "https://github.com/DeeliN221/verdideck"
+Issues = "https://github.com/DeeliN221/verdideck/issues"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0.0",
+  "pytest-asyncio>=0.21.0",
+  "pytest-cov>=4.0.0",
+  "ruff>=0.1.0",
+  "mypy>=1.0.0,<2",
+  "pre-commit>=3.0.0",
+  "types-PyYAML",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=7.0.0",
+  "pytest-asyncio>=0.21.0",
+  "pytest-cov>=4.0.0",
+  "ruff>=0.1.0",
+  "mypy>=1.0.0,<2",
+  "pre-commit>=3.0.0",
+  "types-PyYAML",
+]
+
+[project.scripts]
+verdideck = "verdideck.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+  "--cov=verdideck",
+  "--cov-fail-under=40", # M1: Low coverage, will increase in M3+
+  "-v",
+]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.basedpyright]
+typeCheckingMode = 'standard'
